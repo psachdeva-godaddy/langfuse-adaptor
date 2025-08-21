@@ -1,7 +1,11 @@
+import { config } from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { LangfusePromptSDK } from '../sdk';
+
+// Load environment variables
+config();
 import { createPromptRoutes } from './routes/prompts';
 import { createTemplateRoutes } from './routes/templates';
 import { createChainRoutes } from './routes/chains';
@@ -147,11 +151,18 @@ app.use(errorHandler);
 
 // Start server
 const server = app.listen(port, () => {
-  console.log(`🚀 Langfuse Prompt Management API server running on port ${port}`);
+  console.log('🚀 Langfuse Prompt Management API Server');
+  console.log('================================================');
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  console.log('Port:', port);
+  console.log('Langfuse URL:', process.env.LANGFUSE_BASE_URL);
+  console.log('Public Key:', process.env.LANGFUSE_PUBLIC_KEY ? '✅ Set' : '❌ Missing');
+  console.log('Secret Key:', process.env.LANGFUSE_SECRET_KEY ? '✅ Set' : '❌ Missing');
+  console.log('================================================');
   console.log(`📊 Health check: http://localhost:${port}/health`);
   console.log(`📖 API info: http://localhost:${port}/info`);
   console.log(`🔗 API base URL: http://localhost:${port}/api/v1`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🎯 Server ready at: http://localhost:${port}`);
 });
 
 // Graceful shutdown handling

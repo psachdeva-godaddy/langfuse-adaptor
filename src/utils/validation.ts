@@ -6,6 +6,7 @@ import { ValidationError } from '../types/common';
 const nameSchema = Joi.string().min(1).max(100).pattern(/^[a-zA-Z0-9_-]+$/).required();
 const descriptionSchema = Joi.string().max(500).optional();
 const labelSchema = Joi.string().max(50).optional();
+const labelsSchema = Joi.array().items(Joi.string().max(50)).max(10).optional(); // Support for multiple Langfuse labels
 const tagsSchema = Joi.array().items(Joi.string().max(30)).max(10).optional();
 const versionSchema = Joi.string().pattern(/^\d+\.\d+\.\d+$/).optional();
 
@@ -15,6 +16,7 @@ export const createPromptSchema = Joi.object({
   content: Joi.string().min(1).max(10000).required(),
   description: descriptionSchema,
   label: labelSchema,
+  labels: labelsSchema, // Support for multiple Langfuse labels
   tags: tagsSchema,
   variables: Joi.object().pattern(Joi.string(), Joi.any()).optional(),
   type: Joi.string().valid('text', 'chat').optional().default('text'),
@@ -25,6 +27,7 @@ export const updatePromptSchema = Joi.object({
   content: Joi.string().min(1).max(10000).optional(),
   description: descriptionSchema,
   label: labelSchema,
+  labels: labelsSchema, // Support for multiple Langfuse labels
   tags: tagsSchema,
   variables: Joi.object().pattern(Joi.string(), Joi.any()).optional(),
   config: Joi.object().optional(),

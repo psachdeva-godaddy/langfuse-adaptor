@@ -6,11 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx scripts/start-production.ts",
+    "dev": "tsx src/api/server.ts",
     "start": "node dist/api/server.js",
     "clean": "rm -rf dist",
     "demo": "tsx examples/production-demo.ts",
-    "server:dev": "tsx src/api/server.ts"
+    "test:versions": "tsx scripts/test-version-updates.ts"
   },
   "keywords": [
     "langfuse",

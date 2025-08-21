@@ -36,17 +36,41 @@ export class LangfuseClient {
 
   async createPrompt(data: LangfusePromptData): Promise<LangfusePromptResponse> {
     try {
-      const result = await this.client.createPrompt(data);
+      // According to Langfuse docs, we can create prompts with labels
+      const promptType = data.type || 'text';
+      const promptData: any = {
+        name: data.name,
+        prompt: data.prompt,
+        config: data.config,
+        labels: data.labels || ['latest'], // Default to 'latest' label
+        tags: data.tags,
+        isActive: data.isActive !== false,
+      };
+      
+      // Only add type if it's explicitly set to avoid overload issues
+      if (promptType === 'chat') {
+        promptData.type = 'chat';
+      } else {
+        promptData.type = 'text';
+      }
+      
+      const result = await this.client.createPrompt(promptData);
       return result as unknown as LangfusePromptResponse;
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  async getPrompt(name: string, version?: number): Promise<LangfusePromptResponse> {
+  async getPrompt(name: string, version?: number, options?: { label?: string }): Promise<LangfusePromptResponse> {
     try {
-      const result = await this.client.getPrompt(name, version);
-      return result as unknown as LangfusePromptResponse;
+      // According to Langfuse docs, we can fetch by version or label
+      if (options?.label) {
+        const result = await this.client.getPrompt(name, undefined, { label: options.label });
+        return result as unknown as LangfusePromptResponse;
+      } else {
+        const result = await this.client.getPrompt(name, version);
+        return result as unknown as LangfusePromptResponse;
+      }
     } catch (error) {
       throw this.handleError(error);
     }
@@ -82,7 +106,7 @@ export class LangfuseClient {
       // by fetching the prompt and returning version info
       const prompt = await this.getPrompt(name);
       return [{
-        version: prompt.version,
+        version: prompt.version || 1,
         prompt: prompt.prompt,
         config: prompt.config,
         createdAt: prompt.createdAt,
@@ -96,19 +120,35 @@ export class LangfuseClient {
 
   async updatePrompt(name: string, data: Partial<LangfusePromptData>): Promise<LangfusePromptResponse> {
     try {
-      // Langfuse creates a new version when updating
-      const currentPrompt = await this.getPrompt(name);
+      // In Langfuse, updating a prompt creates a new version with the same name
+      // We need to create a new prompt version, not update the existing one
       const updatedData: LangfusePromptData = {
-        name: currentPrompt.name,
-        prompt: data.prompt || currentPrompt.prompt,
-        config: data.config || currentPrompt.config,
-        labels: data.labels || currentPrompt.labels,
-        tags: data.tags || currentPrompt.tags,
-        version: (currentPrompt.version || 0) + 1,
+        name: name, // Keep the same name to create a new version
+        prompt: data.prompt || '',
+        config: data.config,
+        labels: data.labels || ['latest'],
+        tags: data.tags || [],
+        type: data.type || 'text',
         isActive: true,
       };
       
-      return await this.createPrompt(updatedData);
+      // Creating a prompt with the same name in Langfuse creates a new version
+      const result = await this.createPrompt(updatedData);
+      return result;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updatePromptLabels(name: string, version: number, newLabels: string[]): Promise<LangfusePromptResponse> {
+    try {
+      // According to Langfuse docs, we can update labels of existing prompt versions
+      const result = await this.client.updatePrompt({
+        name,
+        version,
+        newLabels,
+      });
+      return result as unknown as LangfusePromptResponse;
     } catch (error) {
       throw this.handleError(error);
     }

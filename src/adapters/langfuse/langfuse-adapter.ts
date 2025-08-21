@@ -78,30 +78,57 @@ export class LangfuseAdapter extends BaseAdapter {
   async getPrompt(id: string, version?: string): Promise<PromptResponse> {
     this.ensureConnected();
     
-    const versionNumber = version ? parseInt(version.split('.')[0]) : undefined;
-    const result = await this.client.getPrompt(id, versionNumber);
-    return transformFromLangfusePrompt(result);
+    // Support both version numbers and labels
+    if (version) {
+      // Check if it's a semantic version (e.g., "1.0.0") or a label (e.g., "production")
+      if (version.match(/^\d+\.\d+\.\d+$/)) {
+        const versionNumber = parseInt(version.split('.')[0]);
+        const result = await this.client.getPrompt(id, versionNumber);
+        return transformFromLangfusePrompt(result);
+      } else {
+        // It's a label
+        const result = await this.client.getPrompt(id, undefined, { label: version });
+        return transformFromLangfusePrompt(result);
+      }
+    } else {
+      // No version specified, get the production version or latest
+      try {
+        const result = await this.client.getPrompt(id, undefined, { label: 'production' });
+        return transformFromLangfusePrompt(result);
+      } catch (error) {
+        // Fallback to latest if no production version
+        const result = await this.client.getPrompt(id, undefined, { label: 'latest' });
+        return transformFromLangfusePrompt(result);
+      }
+    }
   }
 
   async updatePrompt(id: string, request: UpdatePromptRequest): Promise<PromptResponse> {
     this.ensureConnected();
     
-    const currentPrompt = await this.getPrompt(id);
-    const currentVersion = semver.parse(currentPrompt.version);
-    const newVersion = semver.inc(currentVersion!, 'minor')!;
+    // In Langfuse, the 'id' is actually the prompt name
+    const promptName = id;
+    
+    try {
+      // Get current prompt to merge with updates
+      const currentPrompt = await this.getPrompt(promptName);
+      
+      const langfuseData = transformToLangfusePrompt({
+        name: promptName,
+        content: request.content || currentPrompt.content,
+        description: request.description || currentPrompt.description,
+        label: request.label || currentPrompt.label,
+        labels: request.labels || currentPrompt.labels,
+        tags: request.tags || currentPrompt.tags,
+        config: request.config || currentPrompt.config,
+        type: currentPrompt.type,
+      });
 
-    const langfuseData = transformToLangfusePrompt({
-      name: id,
-      content: request.content || currentPrompt.content,
-      description: request.description || currentPrompt.description,
-      label: request.label || currentPrompt.label,
-      tags: request.tags || currentPrompt.tags,
-      config: request.config || currentPrompt.config,
-      version: newVersion,
-    });
-
-    const result = await this.client.updatePrompt(id, langfuseData);
-    return transformFromLangfusePrompt(result);
+      const result = await this.client.updatePrompt(promptName, langfuseData);
+      return transformFromLangfusePrompt(result);
+    } catch (error) {
+      throw new Error(`Failed to update prompt '${promptName}': ${(error as Error).message}`);
+    }
   }
 
   async deletePrompt(id: string): Promise<void> {
@@ -126,29 +153,42 @@ export class LangfuseAdapter extends BaseAdapter {
     this.ensureConnected();
     
     const versions = await this.client.getPromptVersions(id);
-    return versions.map(v => `${v.version}.0.0`);
+    return versions.map(v => `${v.version || 1}.0.0`);
   }
 
   async rollbackPrompt(id: string, request: RollbackRequest): Promise<PromptResponse> {
     this.ensureConnected();
     
+    // According to Langfuse docs, rollback is done by changing the 'production' label
+    // to point to the target version
     const targetVersionNumber = parseInt(request.targetVersion.split('.')[0]);
-    const targetPrompt = await this.client.getPrompt(id, targetVersionNumber);
     
-    // Create a new version with the target content
-    const currentPrompt = await this.getPrompt(id);
-    const currentVersion = semver.parse(currentPrompt.version);
-    const newVersion = semver.inc(currentVersion!, 'minor')!;
+    try {
+      // Update the production label to point to the target version
+      const result = await this.client.updatePromptLabels(id, targetVersionNumber, ['production']);
+      return transformFromLangfusePrompt(result);
+    } catch (error) {
+      // Fallback: create a new version with the target content
+      const targetPrompt = await this.client.getPrompt(id, targetVersionNumber);
+      
+      const langfuseData = transformToLangfusePrompt({
+        name: id,
+        content: targetPrompt.prompt,
+        config: targetPrompt.config,
+        tags: targetPrompt.tags,
+        labels: ['production', 'latest'],
+      });
 
-    const langfuseData = transformToLangfusePrompt({
-      name: id,
-      content: targetPrompt.prompt,
-      config: targetPrompt.config,
-      tags: targetPrompt.tags,
-      version: newVersion,
-    });
+      const result = await this.client.createPrompt(langfuseData);
+      return transformFromLangfusePrompt(result);
+    }
+  }
 
-    const result = await this.client.createPrompt(langfuseData);
+  async deployPrompt(id: string, version: string, environment: string = 'production'): Promise<PromptResponse> {
+    this.ensureConnected();
+    
+    const versionNumber = parseInt(version.split('.')[0]);
+    const result = await this.client.updatePromptLabels(id, versionNumber, [environment]);
     return transformFromLangfusePrompt(result);
   }
 

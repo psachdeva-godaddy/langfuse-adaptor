@@ -78,6 +78,10 @@ export class LangfusePromptSDK {
     description?: string;
     tags?: string[];
     variables?: Record<string, any>;
+    label?: string;
+    labels?: string[];
+    type?: 'text' | 'chat';
+    config?: Record<string, any>;
   }) {
     return await this._promptManager.createPrompt({
       name,
@@ -85,11 +89,30 @@ export class LangfusePromptSDK {
       description: options?.description,
       tags: options?.tags,
       variables: options?.variables,
+      label: options?.label,
+      labels: options?.labels,
+      type: options?.type,
+      config: options?.config,
     });
   }
 
   async getPrompt(id: string, version?: string) {
     return await this._promptManager.getPrompt(id, version);
+  }
+
+  async updatePrompt(id: string, request: {
+    content?: string;
+    description?: string;
+    label?: string;
+    tags?: string[];
+    variables?: Record<string, any>;
+    config?: Record<string, any>;
+  }) {
+    return await this._promptManager.updatePrompt(id, request);
+  }
+
+  async getPromptVersions(id: string) {
+    return await this._promptManager.getPromptVersions(id);
   }
 
   async createTemplate(name: string, content: string, options?: {

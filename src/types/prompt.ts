@@ -10,6 +10,7 @@ export interface CreatePromptRequest {
   content: string;
   description?: string;
   label?: string;
+  labels?: string[]; // Support for multiple Langfuse labels
   tags?: string[];
   variables?: Record<string, any>;
   type?: 'text' | 'chat';
@@ -20,6 +21,7 @@ export interface UpdatePromptRequest {
   content?: string;
   description?: string;
   label?: string;
+  labels?: string[]; // Support for multiple Langfuse labels
   tags?: string[];
   variables?: Record<string, any>;
   config?: Record<string, any>;
@@ -31,6 +33,7 @@ export interface PromptResponse {
   content: string;
   description?: string;
   label?: string;
+  labels?: string[]; // Support for multiple Langfuse labels
   tags: string[];
   variables?: Record<string, any>;
   author: string;
@@ -39,6 +42,8 @@ export interface PromptResponse {
   version: string;
   type: 'text' | 'chat';
   config?: Record<string, any>;
+  langfuseVersion?: number; // Original Langfuse version number
+  langfuseId?: string; // Actual Langfuse internal ID
 }
 
 export interface PromptFilters extends FilterOptions {
