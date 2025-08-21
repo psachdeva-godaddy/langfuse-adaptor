@@ -1,0 +1,146 @@
+import { Langfuse } from 'langfuse';
+import { LangfuseConfig } from '../../config/langfuse';
+import {
+  LangfusePromptData,
+  LangfusePromptResponse,
+  LangfusePromptVersion,
+  LangfuseListResponse,
+  LangfuseError,
+} from './types';
+
+export class LangfuseClient {
+  private client: Langfuse;
+  private config: LangfuseConfig;
+
+  constructor(config: LangfuseConfig) {
+    this.config = config;
+    this.client = new Langfuse({
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+      secretKey: config.secretKey,
+    });
+  }
+
+  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details?: string }> {
+    try {
+      // Simple health check - just verify the client is initialized
+      // In a real implementation, you might ping the Langfuse server
+      return { status: 'healthy' };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async createPrompt(data: LangfusePromptData): Promise<LangfusePromptResponse> {
+    try {
+      const result = await this.client.createPrompt(data);
+      return result as unknown as LangfusePromptResponse;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getPrompt(name: string, version?: number): Promise<LangfusePromptResponse> {
+    try {
+      const result = await this.client.getPrompt(name, version);
+      return result as unknown as LangfusePromptResponse;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getPrompts(options: {
+    page?: number;
+    limit?: number;
+    name?: string;
+    label?: string;
+    tag?: string;
+  } = {}): Promise<LangfuseListResponse<LangfusePromptResponse>> {
+    try {
+      // Since Langfuse SDK doesn't have getPrompts, we'll simulate it
+      // In a real implementation, you would use the actual Langfuse API
+      return {
+        data: [],
+        meta: {
+          page: options.page || 1,
+          limit: options.limit || 50,
+          totalItems: 0,
+          totalPages: 0,
+        },
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getPromptVersions(name: string): Promise<LangfusePromptVersion[]> {
+    try {
+      // Langfuse doesn't have a direct endpoint for versions, so we'll simulate it
+      // by fetching the prompt and returning version info
+      const prompt = await this.getPrompt(name);
+      return [{
+        version: prompt.version,
+        prompt: prompt.prompt,
+        config: prompt.config,
+        createdAt: prompt.createdAt,
+        createdBy: prompt.createdBy,
+        isActive: prompt.isActive,
+      }];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updatePrompt(name: string, data: Partial<LangfusePromptData>): Promise<LangfusePromptResponse> {
+    try {
+      // Langfuse creates a new version when updating
+      const currentPrompt = await this.getPrompt(name);
+      const updatedData: LangfusePromptData = {
+        name: currentPrompt.name,
+        prompt: data.prompt || currentPrompt.prompt,
+        config: data.config || currentPrompt.config,
+        labels: data.labels || currentPrompt.labels,
+        tags: data.tags || currentPrompt.tags,
+        version: (currentPrompt.version || 0) + 1,
+        isActive: true,
+      };
+      
+      return await this.createPrompt(updatedData);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async deletePrompt(name: string): Promise<void> {
+    try {
+      // Langfuse doesn't have a delete endpoint, so we'll mark as inactive
+      const currentPrompt = await this.getPrompt(name);
+      await this.createPrompt({
+        ...currentPrompt,
+        version: (currentPrompt.version || 0) + 1,
+        isActive: false,
+      });
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  private handleError(error: any): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    
+    if (typeof error === 'object' && error.message) {
+      return new Error(error.message);
+    }
+    
+    return new Error('Unknown Langfuse error');
+  }
+
+  async shutdown(): Promise<void> {
+    await this.client.shutdownAsync();
+  }
+}

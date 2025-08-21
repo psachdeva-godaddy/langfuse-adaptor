@@ -1,0 +1,42 @@
+{
+  "name": "langfuse-adaptor",
+  "version": "1.0.0",
+  "description": "A unified interface for prompt management using Langfuse server with Adapter Pattern",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx scripts/start-production.ts",
+    "start": "node dist/api/server.js",
+    "clean": "rm -rf dist",
+    "demo": "tsx examples/production-demo.ts",
+    "server:dev": "tsx src/api/server.ts"
+  },
+  "keywords": [
+    "langfuse",
+    "prompt-management",
+    "adapter-pattern",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.0",
+    "helmet": "^7.0.0",
+    "joi": "^17.9.0",
+    "langfuse": "^3.0.0",
+    "semver": "^7.5.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "@types/semver": "^7.5.0",
+    "@types/uuid": "^9.0.0",
+    "tsx": "^3.12.0",
+    "typescript": "^5.0.0"
+  }
+}
