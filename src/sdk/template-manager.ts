@@ -1,4 +1,6 @@
 import { IAdapter } from '../adapters/base-adapter';
+import { LangfuseAdapter } from '../adapters/langfuse/langfuse-adapter';
+import { createLangfuseConfig, validateLangfuseConfig, LangfuseConfig } from '../config/langfuse';
 import {
   CreateTemplateRequest,
   UpdateTemplateRequest,
@@ -18,8 +20,44 @@ import {
 import { TemplateEngine, TemplateSyntax } from '../utils/template-engine';
 import { VersionManager } from '../utils/versioning';
 
+export interface TemplateManagerOptions {
+  adapter?: IAdapter;
+  langfuseConfig?: LangfuseConfig;
+  autoConnect?: boolean;
+}
+
 export class TemplateManager {
-  constructor(private adapter: IAdapter) {}
+  private adapter: IAdapter;
+
+  constructor(options: TemplateManagerOptions = {}) {
+    // Initialize adapter
+    if (options.adapter) {
+      this.adapter = options.adapter;
+    } else {
+      const config = options.langfuseConfig || createLangfuseConfig();
+      validateLangfuseConfig(config);
+      this.adapter = new LangfuseAdapter(config);
+    }
+
+    // Auto-connect if requested
+    if (options.autoConnect !== false) {
+      this.connect().catch(error => {
+        console.error('Failed to auto-connect TemplateManager:', error);
+      });
+    }
+  }
+
+  async connect(): Promise<void> {
+    await this.adapter.connect();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.adapter.disconnect();
+  }
+
+  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details?: string }> {
+    return await this.adapter.healthCheck();
+  }
 
   async createTemplate(request: CreateTemplateRequest): Promise<TemplateResponse> {
     // Validate request

@@ -1,4 +1,6 @@
 import { IAdapter } from '../adapters/base-adapter';
+import { LangfuseAdapter } from '../adapters/langfuse/langfuse-adapter';
+import { createLangfuseConfig, validateLangfuseConfig, LangfuseConfig } from '../config/langfuse';
 import {
   CreatePromptRequest,
   UpdatePromptRequest,
@@ -16,8 +18,44 @@ import {
 } from '../utils/validation';
 import { VersionManager } from '../utils/versioning';
 
+export interface PromptManagerOptions {
+  adapter?: IAdapter;
+  langfuseConfig?: LangfuseConfig;
+  autoConnect?: boolean;
+}
+
 export class PromptManager {
-  constructor(private adapter: IAdapter) {}
+  private adapter: IAdapter;
+
+  constructor(options: PromptManagerOptions = {}) {
+    // Initialize adapter
+    if (options.adapter) {
+      this.adapter = options.adapter;
+    } else {
+      const config = options.langfuseConfig || createLangfuseConfig();
+      validateLangfuseConfig(config);
+      this.adapter = new LangfuseAdapter(config);
+    }
+
+    // Auto-connect if requested
+    if (options.autoConnect !== false) {
+      this.connect().catch(error => {
+        console.error('Failed to auto-connect PromptManager:', error);
+      });
+    }
+  }
+
+  async connect(): Promise<void> {
+    await this.adapter.connect();
+  }
+
+  async disconnect(): Promise<void> {
+    await this.adapter.disconnect();
+  }
+
+  async healthCheck(): Promise<{ status: 'healthy' | 'unhealthy'; details?: string }> {
+    return await this.adapter.healthCheck();
+  }
 
   async createPrompt(request: CreatePromptRequest): Promise<PromptResponse> {
     // Validate request
