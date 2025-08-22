@@ -293,6 +293,58 @@ classDiagram
 3) Adapter call via `LangfuseAdapter`
 4) Return typed `PromptResponse`
 
+#### 6.3 SDK Flow (Node app)
+
+```mermaid
+sequenceDiagram
+  participant App as Node App
+  participant SDK as LangfuseSDK
+  participant PM as PromptManager
+  participant TM as TemplateManager
+  participant CM as ChainManager
+  participant MM as MetadataManager
+  participant Ad as LangfuseAdapter
+  participant LFC as LangfuseClient
+  participant LF as Langfuse
+
+  Note over App,SDK: Initialization (autoConnect)
+  App->>SDK: new LangfuseSDK({ autoConnect: true })
+  SDK->>PM: connect()
+  SDK->>TM: connect()
+  SDK->>CM: connect()
+  SDK->>MM: connect()
+  PM->>Ad: connect()
+  TM->>Ad: connect()
+  CM->>Ad: connect()
+  MM->>Ad: connect()
+  Ad->>LFC: healthCheck()
+  LFC-->>Ad: { status: healthy }
+
+  Note over App,SDK: Operation (example: create prompt)
+  App->>SDK: prompts.createPrompt(request)
+  SDK->>PM: createPrompt(request)
+  PM->>PM: validate schema/name
+  PM->>Ad: createPrompt(validated)
+  Ad->>LFC: createPrompt(transformed)
+  LFC->>LF: API call
+  LF-->>LFC: result
+  LFC-->>Ad: response
+  Ad-->>PM: PromptResponse
+  PM-->>SDK: PromptResponse
+  SDK-->>App: PromptResponse
+
+  Note over App,SDK: Teardown
+  App->>SDK: disconnect()
+  SDK->>PM: disconnect()
+  SDK->>TM: disconnect()
+  SDK->>CM: disconnect()
+  SDK->>MM: disconnect()
+  PM->>Ad: disconnect()
+  TM->>Ad: disconnect()
+  CM->>Ad: disconnect()
+  MM->>Ad: disconnect()
+```
+
 ### 7. Public Contracts (Selected)
 
 - `IRoutingStrategy`
