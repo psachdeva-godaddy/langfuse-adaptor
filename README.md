@@ -9,6 +9,8 @@ A comprehensive Node.js TypeScript application that provides a unified interface
 - **Non-Node Applications** → REST APIs (which internally use Node SDK)
 - **Node SDK** → Wraps Langfuse SDK using Adapter Pattern
 
+For the full, canonical architecture (overview + detailed spec), see ARCHITECTURE.md.
+
 ### Key Features
 - ✅ **Prompt Management**: CRUD operations with versioning and rollback
 - ✅ **Template System**: Variable substitution with multiple syntax support
